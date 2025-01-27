@@ -1,0 +1,88 @@
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+    Dim wsMaster As Worksheet
+    Dim wsDevice As Worksheet
+    Dim deviceRange As Range
+    Dim masterRange As Range
+    Dim deviceValues As Variant
+
+    ' Set references to your sheets
+    Set wsMaster = ThisWorkbook.Sheets("EFC Master")
+    Set wsDevice = ThisWorkbook.Sheets("Device Information")
+
+    ' Define the ranges
+    Set deviceRange = wsDevice.Range("B2:Q14")
+    Set masterRange = wsMaster.Range("B2:Q14")
+
+    ' Check if the selection intersects with the defined range on Device Information
+    If Not Intersect(Target, deviceRange) Is Nothing Then
+        Application.ScreenUpdating = False ' Disable screen updates
+        Application.EnableEvents = False ' Disable events
+        On Error GoTo CleanExit
+
+        ' Transfer values using arrays
+        deviceValues = deviceRange.Value
+        masterRange.Value = deviceValues
+
+        ' Transfer formats
+        Dim cell As Range
+        For Each cell In deviceRange
+            wsMaster.Range(cell.Address).Interior.Color = cell.Interior.Color
+            wsMaster.Range(cell.Address).Font.Color = cell.Font.Color
+            wsMaster.Range(cell.Address).Font.Bold = cell.Font.Bold
+        Next cell
+
+CleanExit:
+        Application.EnableEvents = True ' Re-enable events
+        Application.ScreenUpdating = True ' Re-enable screen updates
+    End If
+End Sub
+
+Private Sub Worksheet_Change(ByVal Target As Range)
+    Dim response As VbMsgBoxResult
+    Dim goBackCell As Range
+
+    ' Ensure this runs only for the specific cell (Q9)
+    If Not Intersect(Target, Me.Range("Q9")) Is Nothing Then
+        ' Temporarily disable events to avoid re-triggering the change event when setting the cell value
+        Application.EnableEvents = False
+
+        ' Check if the value of the cell is "No"
+        If Target.Value = "No" Then
+            ' Change the color to red if "No" is selected
+            Me.Range("Q9").Interior.Color = RGB(255, 0, 0) ' Red color
+            
+            ' Ask if the item has been added to the "Go-Back" sheet
+            response = MsgBox("Has this been added to the Go-Back sheet?", vbYesNo + vbQuestion, "Confirmation")
+            
+            ' If "No" is selected, attempt to "click" the hidden link to open the Go-Back sheet
+            If response = vbNo Then
+                ' Set the reference to the invisible hyperlink cell (e.g., Q273)
+                Set goBackCell = Me.Range("Q273") ' The cell containing the hyperlink
+                
+                ' Simulate a "click" to open the Go-Back sheet (this opens the hyperlink)
+                If Not goBackCell Is Nothing Then
+                    ' Display a status message
+                    Application.StatusBar = "Please wait while the Go-Back sheet is opening..."
+                    
+                    ' Follow the hyperlink to open the Go-Back sheet
+                    goBackCell.Hyperlinks(1).Follow
+                    
+                    ' Clear the status bar after opening
+                    Application.StatusBar = False
+                End If
+            End If
+        ElseIf Target.Value = "Yes" Then
+            ' Change the color to green if "Yes" is selected
+            Me.Range("Q9").Interior.Color = RGB(0, 255, 0) ' Green color
+        Else
+            ' Default color (if not Yes or No)
+            Me.Range("Q9").Interior.ColorIndex = xlNone
+        End If
+
+        ' After selecting Yes or No, set the cell to always show "Non-Managed CC Switch Resolved"
+        Me.Range("Q9").Value = "Non-Managed CC Switch Resolved"
+
+        ' Re-enable events after the change
+        Application.EnableEvents = True
+    End If
+End Sub
